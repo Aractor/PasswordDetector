@@ -64,9 +64,9 @@ import os
 import sys
 import subprocess
 import re
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import base64
-from xmlrpclib import ServerProxy
+from xmlrpc.client import ServerProxy
 import shlex
 
 # Exit codes used by NZBGet
@@ -132,7 +132,7 @@ def start_check():
 	# Check settings
 	optname = 'NZBPO_PASSACTION'
 	if (not optname in os.environ):
-		print('[ERROR] Option %s is missing in configuration file. Please check script settings' % optname[6:])
+		print(('[ERROR] Option %s is missing in configuration file. Please check script settings' % optname[6:]))
 		sys.exit(POSTPROCESS_ERROR)
 
 # Check if the verbose logging option is enabled
@@ -145,9 +145,9 @@ def check_verbose_logging():
 def check_passwordstrings(outtext,errtext):
 	if check_verbose_logging():
 	  if len(outtext)>0:
-		print("out: " + outtext.translate(None,'\r\n'))	
+		print(("out: " + outtext.translate(None,'\r\n')))	
 	  if len(errtext)>0:
-		print("error: " + errtext.translate(None,'\r\n'))
+		print(("error: " + errtext.translate(None,'\r\n')))
 
 	PasswordString = PasswordStrings.split(',')
 	
@@ -157,7 +157,7 @@ def check_passwordstrings(outtext,errtext):
 
 	for m_string in PasswordString:
 		m_string = m_string.strip().lower()
-		if m_string <> '':
+		if m_string != '':
 			if m_string in outtext.lower():
 				return True
 			if m_string in errtext.lower():
@@ -176,10 +176,10 @@ def get_latest_file(dir):
 		temp_folder = os.path.dirname(tmp_file_name)
 		if not os.path.exists(temp_folder):
 			os.makedirs(temp_folder)
-			print('[DETAIL] Created folder ' + temp_folder)
+			print(('[DETAIL] Created folder ' + temp_folder))
 		with open(tmp_file_name, "w") as tmp_file:
 			tmp_file.write('')
-			print('[DETAIL] Created temp file ' + tmp_file_name)
+			print(('[DETAIL] Created temp file ' + tmp_file_name))
 		return os.listdir(dir)
 
 # Saves tested files so to not test again
@@ -214,13 +214,13 @@ def contains_password(dir):
 			try:
 				command = [unrar(), 'l', '-p-', '-c-',  dir + '/' + file]
 				if check_verbose_logging():
-					print('command: %s' % command)
+					print(('command: %s' % command))
 				proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 				out, err = proc.communicate()
 				if check_passwordstrings(out,err):
 					return True
 			except Exception as e:
-				print('[ERROR] Failed %s: %s' % (file, e))
+				print(('[ERROR] Failed %s: %s' % (file, e)))
 				if verbose:
 					traceback.print_exc() 
 		tested += file + '\n'
@@ -264,13 +264,13 @@ def call_nzbget_direct(url_command):
 	
 	# Building http-URL to call the method
 	httpUrl = 'http://%s:%s/jsonrpc/%s' % (host, port, url_command);
-	request = urllib2.Request(httpUrl)
+	request = urllib.request.Request(httpUrl)
 
 	base64string = base64.encodestring('%s:%s' % (username, password)).replace('\n', '')
 	request.add_header("Authorization", "Basic %s" % base64string)   
 
 	# Load data from NZBGet
-	response = urllib2.urlopen(request)
+	response = urllib.request.urlopen(request)
 	data = response.read()
 
 	# "data" is a JSON raw-string
@@ -310,7 +310,7 @@ def sort_inner_files():
 
 	# Move the last rar-file to the top of file list
 	if (file_id):
-		print('[INFO] Moving last rar-file to the top: %s' % file_name)
+		print(('[INFO] Moving last rar-file to the top: %s' % file_name))
 		# Create remote server object
 		nzbget = connect_to_nzbget()
 		# Using RPC-method "editqueue" of XML-RPC-object "nzbget".
@@ -345,10 +345,10 @@ def clean_up():
 	for temp_id in old_temp_files:
 		temp_file = temp_folder + '/' + str(temp_id)
 		try:
-			print('[DETAIL] Removing temp file ' + temp_file)
+			print(('[DETAIL] Removing temp file ' + temp_file))
 			os.remove(temp_file)
 		except:
-			print('[ERROR] Could not remove temp file ' + temp_file)
+			print(('[ERROR] Could not remove temp file ' + temp_file))
 
 # Script body
 def main():
@@ -384,21 +384,21 @@ def main():
 	# files now.
 	if os.environ.get('NZBNA_EVENT') == 'NZB_ADDED' or \
 			(os.environ.get('NZBNA_EVENT') == 'FILE_DOWNLOADED' and \
-			os.environ.get('NZBPR_FAKEDETECTOR_SORTED') <> 'yes'):
+			os.environ.get('NZBPR_FAKEDETECTOR_SORTED') != 'yes'):
 		# Check if previously sorted by FakeDetctor
 		if not os.environ.get('NZBPR_FAKEDETECTOR_SORTED') == 'yes':
-			print('[INFO] Sorting inner files for earlier fake detection for %s' % NzbName)
+			print(('[INFO] Sorting inner files for earlier fake detection for %s' % NzbName))
 			sys.stdout.flush()
 			sort_inner_files()
 			print('[NZB] NZBPR_FAKEDETECTOR_SORTED=yes')
 		if os.environ.get('NZBNA_EVENT') == 'NZB_ADDED':
 			sys.exit(POSTPROCESS_NONE)
 
-	print('[DETAIL] Detecting password for %s' % NzbName)
+	print(('[DETAIL] Detecting password for %s' % NzbName))
 	sys.stdout.flush()
 	
 	if contains_password(Directory) is True:
-		print("[WARNING] Password found in %s" % NzbName)
+		print(("[WARNING] Password found in %s" % NzbName))
 		# A password is detected
 		#
 		# Add post-processing parameter "PASSWORDDETECTOR_HASPASSWORD" for nzb-file.
@@ -409,14 +409,14 @@ def main():
 
 		if os.environ['NZBPO_PASSACTION'] == "Pause":
 			pause_nzb(os.environ.get(Prefix + 'NZBID'))
-			print("[DETAIL] Paused %s" % NzbName)
+			print(("[DETAIL] Paused %s" % NzbName))
 			
 		if os.environ['NZBPO_PASSACTION'] == "Mark Bad":
 		
 			# Special command telling NZBGet to mark nzb as bad. The nzb will
 			# be removed from queue and become status "FAILURE/BAD".
 			print('[NZB] MARK=BAD')
-			print("[DETAIL] Marked bad %s" % NzbName)
+			print(("[DETAIL] Marked bad %s" % NzbName))
 	else:
 		# Not password protected or at least doesn't look like it (yet).
 		#
@@ -428,7 +428,7 @@ def main():
 		if os.environ.get('NZBPR_PASSWORDDETECTOR_HASPASSWORD') == 'yes':
 			print('[NZB] NZBPR_PASSWORDDETECTOR_HASPASSWORD=')
 		
-	print('[DETAIL] Detecting completed for %s' % NzbName)
+	print(('[DETAIL] Detecting completed for %s' % NzbName))
 	sys.stdout.flush()
 	
 	# Remove temp files in PP
